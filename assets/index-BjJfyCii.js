@@ -492,7 +492,7 @@ ${S}`)}return d}),Ka=R1(Jy);/**
 Description: ${t.description}
 `,t.topics.forEach(l=>{n+=`- Topic: ${l.title}. Summary: ${l.summary}
 `}),n+=`
-`}),n+="Answer questions based on this curriculum. If a user asks where to find something, guide them to the specific module number.",n},Tb=async n=>{try{return(await new Wy({apiKey:"PLACEHOLDER_API_KEYAIzaSyD-YUgshTpuhJz5KYC6qG-otGeq_5ys2QU"}).models.generateContent({model:"gemini-2.5-flash",contents:n,config:{systemInstruction:Sb()}})).text||"I'm sorry, I couldn't generate a response."}catch(t){return console.error("Gemini API Error:",t),"Sorry, I encountered an error while processing your request."}},Eb=async(n,t)=>{try{const l=new Wy({apiKey:"PLACEHOLDER_API_KEYAIzaSyD-YUgshTpuhJz5KYC6qG-otGeq_5ys2QU"}),a=`Please provide a very brief, 3-bullet-point summary of the following training topic titled "${n}". Here is the content:
+`}),n+="Answer questions based on this curriculum. If a user asks where to find something, guide them to the specific module number.",n},Tb=async n=>{try{return(await new Wy({apiKey:"AIzaSyD-YUgshTpuhJz5KYC6qG-otGeq_5ys2QU"}).models.generateContent({model:"gemini-2.5-flash",contents:n,config:{systemInstruction:Sb()}})).text||"I'm sorry, I couldn't generate a response."}catch(t){return console.error("Gemini API Error:",t),"Sorry, I encountered an error while processing your request."}},Eb=async(n,t)=>{try{const l=new Wy({apiKey:"AIzaSyD-YUgshTpuhJz5KYC6qG-otGeq_5ys2QU"}),a=`Please provide a very brief, 3-bullet-point summary of the following training topic titled "${n}". Here is the content:
 
 ${t}
 
