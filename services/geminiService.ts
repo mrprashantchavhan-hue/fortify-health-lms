@@ -40,3 +40,22 @@ export const sendMessageToGemini = async (userMessage: string): Promise<string> 
     return "Sorry, I encountered an error while processing your request.";
   }
 };
+
+export const generateTopicSummary = async (topicTitle: string, topicText: string): Promise<string> => {
+  if (!process.env.API_KEY) {
+    return "API Key is missing. Please configure the environment.";
+  }
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Please provide a very brief, 3-bullet-point summary of the following training topic titled "${topicTitle}". Here is the content:\n\n${topicText}\n\nMake the summary easy to read and focus on the most critical takeaways.`;
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    return response.text || "Could not generate summary.";
+  } catch (error) {
+    console.error("Gemini summarizer error:", error);
+    return "Error generating summary.";
+  }
+};

@@ -458,6 +458,54 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ modules, setModules }) 
         </div>
       )}
 
+      {/* PROGRESS TAB */}
+      {activeTab === 'progress' && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800">Learner Progress Overview</h3>
+              <span className="text-xs font-medium bg-teal-100 text-teal-800 px-3 py-1 rounded-full">{users.filter(u => u.role === 'user').length} Learners Enrolled</span>
+            </div>
+            <div className="p-6">
+              <div className="space-y-6">
+                {users.filter(u => u.role === 'user').length === 0 ? (
+                   <p className="text-slate-500 text-center py-8">No learners found. Create user accounts to track their progress.</p>
+                ) : (
+                  users.filter(u => u.role === 'user').map(user => {
+                    const totalTopics = modules.reduce((sum, m) => sum + m.topics.length, 0);
+                    const userProg = userProgressData[user.username]?.modules || {};
+                    const completedTopics = Object.values(userProg).reduce((sum, m: any) => (sum as number) + (m.completedTopicIds?.length || 0), 0) as number;
+                    const percentage = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+                    
+                    return (
+                      <div key={user.username} className="bg-white border border-slate-200 shadow-sm rounded-lg p-5">
+                        <div className="flex justify-between items-end mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-teal-50 border border-teal-100 text-teal-700 flex items-center justify-center">
+                              <UserIcon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-lg">{user.username}</h4>
+                              <p className="text-sm font-medium text-slate-500">{completedTopics} of {totalTopics} training topics completed</p>
+                            </div>
+                          </div>
+                          <div className={`text-2xl font-black ${percentage === 100 ? 'text-green-600' : 'text-teal-600'}`}>
+                            {percentage}%
+                          </div>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-3 border border-slate-200/50">
+                          <div className={`h-3 rounded-full transition-all duration-1000 ${percentage === 100 ? 'bg-green-500' : 'bg-teal-500'}`} style={{ width: `${percentage}%` }}></div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* USERS TAB */}
       {activeTab === 'users' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-2 duration-300">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useParams, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ExternalLink, Settings, LogOut, Shield, PlayCircle, User, Lock, LayoutDashboard } from 'lucide-react';
+import { ExternalLink, Settings, LogOut, Shield, PlayCircle, User, Lock, LayoutDashboard, CheckCircle, Sparkles, XCircle } from 'lucide-react';
 import { INITIAL_MODULES } from './constants';
 import { Module, User as UserType } from './types';
 import ModuleCard from './components/ModuleCard';
@@ -8,6 +8,7 @@ import ChatWidget from './components/ChatWidget';
 import { LoginPage, RegisterPage, AdminLoginPage, ForgotPasswordPage } from './components/AuthPages';
 import VideoModal from './components/VideoModal';
 import AdminDashboard from './components/AdminDashboard';
+import { generateTopicSummary } from './services/geminiService';
 
 // --- Top Bars ---
 
@@ -137,10 +138,50 @@ const UserDashboard = ({ modules, user }: { modules: Module[], user: UserType | 
   );
 };
 
-const ModuleDetail = ({ modules }: { modules: Module[] }) => {
+const ModuleDetail = ({ modules, user }: { modules: Module[], user: UserType | null }) => {
   const { id } = useParams<{ id: string }>();
   const module = modules.find(m => m.id === id);
   const [playingVideo, setPlayingVideo] = useState<{url: string, title: string} | null>(null);
+
+  const [completedTopics, setCompletedTopics] = useState<string[]>(() => {
+    if (!user || !module) return [];
+    try {
+      const allProgress = JSON.parse(localStorage.getItem('fh_user_progress') || '{}');
+      return allProgress[user.username]?.modules?.[module.id]?.completedTopicIds || [];
+    } catch { return []; }
+  });
+
+  const [summaries, setSummaries] = useState<Record<string, {text: string, loading: boolean}>>({});
+
+  const toggleTopicCompletion = (topicId: string) => {
+    if (!user || !module) return;
+    
+    setCompletedTopics(prev => {
+      const isCompleted = prev.includes(topicId);
+      const newCompleted = isCompleted ? prev.filter(t => t !== topicId) : [...prev, topicId];
+      
+      try {
+        const allProgress = JSON.parse(localStorage.getItem('fh_user_progress') || '{}');
+        const userProg = allProgress[user.username] || { modules: {} };
+        const moduleProg = userProg.modules[module.id] || { completedTopicIds: [] };
+        moduleProg.completedTopicIds = newCompleted;
+        userProg.modules[module.id] = moduleProg;
+        allProgress[user.username] = userProg;
+        localStorage.setItem('fh_user_progress', JSON.stringify(allProgress));
+        
+        // Dispatch custom event to notify UserDashboard if it's rendered, though we typically unmount
+        window.dispatchEvent(new Event('progress_updated'));
+      } catch (e) { console.error(e); }
+      
+      return newCompleted;
+    });
+  };
+
+  const handleSummarize = async (topicId: string, topicTitle: string, topicSummary: string) => {
+    setSummaries(prev => ({...prev, [topicId]: {text: "", loading: true}}));
+    const result = await generateTopicSummary(topicTitle, topicSummary);
+    setSummaries(prev => ({...prev, [topicId]: {text: result, loading: false}}));
+  };
 
   if (!module) return <Navigate to="/dashboard" />;
 
@@ -176,6 +217,56 @@ const ModuleDetail = ({ modules }: { modules: Module[] }) => {
                       </button>
                     ))}
                   </div>
+
+                  {user && (
+                    <div className="w-full h-px bg-slate-100 my-5" />
+                  )}
+                  
+                  {user && (
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                      <button
+                        onClick={() => toggleTopicCompletion(topic.id)}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                          completedTopics.includes(topic.id) 
+                            ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200 shadow-inner' 
+                            : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 shadow-sm'
+                        }`}
+                      >
+                        <CheckCircle className={`w-4 h-4 ${completedTopics.includes(topic.id) ? 'text-green-600' : 'text-slate-400'}`} />
+                        {completedTopics.includes(topic.id) ? 'Completed' : 'Mark as Complete'}
+                      </button>
+                      
+                      <button
+                        onClick={() => handleSummarize(topic.id, topic.title, topic.summary)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-bold shadow-sm"
+                      >
+                        <Sparkles className="w-4 h-4 text-indigo-500" />
+                        AI Summary
+                      </button>
+                    </div>
+                  )}
+
+                  {summaries[topic.id] && (
+                    <div className="mt-5 p-5 bg-indigo-50/50 border border-indigo-100 rounded-xl relative shadow-sm">
+                      {summaries[topic.id].loading ? (
+                        <div className="flex items-center gap-2 text-indigo-600 font-medium">
+                          <Sparkles className="w-5 h-5 animate-spin" /> Generating AI Summary...
+                        </div>
+                      ) : (
+                        <div>
+                          <button onClick={() => setSummaries(prev => {const next = {...prev}; delete next[topic.id]; return next;})} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                            <XCircle className="w-5 h-5" />
+                          </button>
+                          <h4 className="flex items-center gap-2 font-bold text-indigo-900 mb-3 text-sm uppercase tracking-wide">
+                            <Sparkles className="w-4 h-4 text-indigo-500" /> Key Takeaways
+                          </h4>
+                          <div className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                              {summaries[topic.id].text}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -307,7 +398,7 @@ const App: React.FC = () => {
         
         <Route path="/module/:id" element={
           <UserLayout user={user} role="user" onLogout={handleLogout}>
-            <ModuleDetail modules={modules} />
+            <ModuleDetail modules={modules} user={user} />
           </UserLayout>
         } />
 
